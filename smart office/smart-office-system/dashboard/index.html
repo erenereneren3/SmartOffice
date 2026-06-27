@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Office System</title>
+    <meta name="description" content="Automatisierte Steuerung und Überwachung von Bürokomponenten via ESP32 und MQTT">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="app">
+        <aside id="sidebar">
+            <div id="logo-wrap">
+                <div id="logo-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/>
+                        <path d="M9 21V12h6v9"/>
+                    </svg>
+                </div>
+                <div>
+                    <div id="logo-title">Smart Office</div>
+                    <div id="logo-sub">System v1.0</div>
+                </div>
+            </div>
+
+            <nav id="nav">
+                <a href="#" class="nav-item active" data-section="overview" id="nav-overview">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                    Übersicht
+                </a>
+                <a href="#" class="nav-item" data-section="controls" id="nav-controls">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+                    Steuerung
+                </a>
+                <a href="#" class="nav-item" data-section="history" id="nav-history">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                    Verlauf
+                </a>
+                <a href="#" class="nav-item" data-section="automation" id="nav-automation">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                    Automatisierung
+                </a>
+                <a href="#" class="nav-item" data-section="system" id="nav-system">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+                    System
+                </a>
+            </nav>
+
+            <div id="sidebar-status">
+                <div class="status-row">
+                    <span class="status-dot" id="ws-dot"></span>
+                    <span id="ws-label">WebSocket</span>
+                </div>
+                <div class="status-row">
+                    <span class="status-dot" id="mqtt-dot"></span>
+                    <span id="mqtt-label">MQTT Broker</span>
+                </div>
+                <div class="status-row">
+                    <span class="status-dot" id="esp-dot"></span>
+                    <span id="esp-label">ESP32</span>
+                </div>
+            </div>
+        </aside>
+
+        <main id="main">
+            <header id="topbar">
+                <div id="topbar-left">
+                    <button id="sidebar-toggle" aria-label="Sidebar umschalten">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                    </button>
+                    <div>
+                        <h1 id="page-title">Übersicht</h1>
+                        <p id="page-subtitle">Echtzeit-Monitoring · Raum 1</p>
+                    </div>
+                </div>
+                <div id="topbar-right">
+                    <div id="clock"></div>
+                    <div id="connection-badge" class="badge badge-offline">Offline</div>
+                </div>
+            </header>
+
+            <div id="content">
+
+                <section id="section-overview" class="section active">
+                    <div id="sensor-grid">
+                        <div class="sensor-card" id="card-temperature">
+                            <div class="sensor-card-header">
+                                <div class="sensor-icon temp-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 14.76V3.5a2.5 2.5 0 00-5 0v11.26a4.5 4.5 0 105 0z"/></svg>
+                                </div>
+                                <div>
+                                    <div class="sensor-label">Temperatur</div>
+                                    <div class="sensor-room">Raum 1</div>
+                                </div>
+                            </div>
+                            <div class="gauge-wrap">
+                                <canvas id="gauge-temp" width="160" height="100"></canvas>
+                                <div class="gauge-value-wrap">
+                                    <span class="sensor-value" id="val-temperature">--</span>
+                                    <span class="sensor-unit">°C</span>
+                                </div>
+                            </div>
+                            <div class="sensor-trend">
+                                <span class="trend-label">Status</span>
+                                <span class="trend-badge" id="badge-temperature">–</span>
+                            </div>
+                        </div>
+
+                        <div class="sensor-card" id="card-humidity">
+                            <div class="sensor-card-header">
+                                <div class="sensor-icon humidity-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2.69l5.66 5.66a8 8 0 11-11.31 0z"/></svg>
+                                </div>
+                                <div>
+                                    <div class="sensor-label">Luftfeuchtigkeit</div>
+                                    <div class="sensor-room">Raum 1</div>
+                                </div>
+                            </div>
+                            <div class="progress-bar-wrap">
+                                <div class="progress-track">
+                                    <div class="progress-fill humidity-fill" id="bar-humidity"></div>
+                                </div>
+                                <div class="sensor-value-row">
+                                    <span class="sensor-value" id="val-humidity">--</span>
+                                    <span class="sensor-unit">%</span>
+                                </div>
+                            </div>
+                            <div class="range-labels"><span>0%</span><span>50%</span><span>100%</span></div>
+                            <div class="sensor-trend">
+                                <span class="trend-label">Status</span>
+                                <span class="trend-badge" id="badge-humidity">–</span>
+                            </div>
+                        </div>
+
+                        <div class="sensor-card motion-card" id="card-motion">
+                            <div class="sensor-card-header">
+                                <div class="sensor-icon motion-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                                </div>
+                                <div>
+                                    <div class="sensor-label">Bewegung</div>
+                                    <div class="sensor-room">PIR Sensor</div>
+                                </div>
+                            </div>
+                            <div class="motion-indicator-wrap">
+                                <div class="motion-ring" id="motion-ring">
+                                    <div class="motion-core"></div>
+                                </div>
+                            </div>
+                            <div class="motion-status" id="motion-status">Kein Bewegung</div>
+                            <div class="sensor-trend">
+                                <span class="trend-label">Zuletzt erkannt</span>
+                                <span class="trend-badge" id="badge-motion">–</span>
+                            </div>
+                        </div>
+
+                        <div class="sensor-card" id="card-light">
+                            <div class="sensor-card-header">
+                                <div class="sensor-icon light-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+                                </div>
+                                <div>
+                                    <div class="sensor-label">Licht</div>
+                                    <div class="sensor-room">LDR Sensor</div>
+                                </div>
+                            </div>
+                            <div class="light-sun-wrap">
+                                <div class="light-sun" id="light-sun">
+                                    <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="6"/></svg>
+                                </div>
+                            </div>
+                            <div class="sensor-value-center">
+                                <span class="sensor-value" id="val-light">--</span>
+                                <span class="sensor-unit">lux</span>
+                            </div>
+                            <div class="sensor-trend">
+                                <span class="trend-label">Helligkeit</span>
+                                <span class="trend-badge" id="badge-light">–</span>
+                            </div>
+                        </div>
+
+                        <div class="sensor-card" id="card-co2">
+                            <div class="sensor-card-header">
+                                <div class="sensor-icon co2-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 16.5c1.1 0 2-.9 2-2s-.9-2-2-2c-.1 0-.1 0-.2 0-.2-1.1-1.2-2-2.3-2-.4 0-.8.1-1.1.3C13 9.8 11.7 9 10.2 9 8.3 9 6.7 10.4 6.5 12.2c-.1 0-.1 0-.2 0C5.1 12.2 4 13.3 4 14.5S5.1 17 6.3 17H17v-.5z"/></svg>
+                                </div>
+                                <div>
+                                    <div class="sensor-label">CO₂ / Luftqualität</div>
+                                    <div class="sensor-room">MQ135 Sensor</div>
+                                </div>
+                            </div>
+                            <div class="co2-bar-wrap">
+                                <div class="co2-levels">
+                                    <div class="co2-segment co2-good">Gut</div>
+                                    <div class="co2-segment co2-moderate">Mittel</div>
+                                    <div class="co2-segment co2-poor">Schlecht</div>
+                                </div>
+                                <div class="co2-needle-track">
+                                    <div class="co2-needle" id="co2-needle"></div>
+                                </div>
+                            </div>
+                            <div class="sensor-value-center">
+                                <span class="sensor-value" id="val-co2">--</span>
+                                <span class="sensor-unit">ppm</span>
+                            </div>
+                            <div class="sensor-trend">
+                                <span class="trend-label">Qualität</span>
+                                <span class="trend-badge" id="badge-co2">–</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="section-controls" class="section">
+                    <div id="controls-grid">
+                        <div class="control-card">
+                            <div class="control-header">
+                                <div class="control-icon light-ctrl-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2a7 7 0 017 7c0 2.5-1.3 4.7-3.3 6l-.7 3H9l-.7-3A7 7 0 0112 2z"/><path d="M9 18h6M10 21h4"/></svg>
+                                </div>
+                                <div>
+                                    <div class="control-title">Deckenlicht</div>
+                                    <div class="control-sub">Relay 1 · GPIO 16</div>
+                                </div>
+                                <label class="toggle" id="toggle-light-wrap">
+                                    <input type="checkbox" id="toggle-light">
+                                    <span class="toggle-track"></span>
+                                </label>
+                            </div>
+                            <div class="control-body">
+                                <div id="rgb-section">
+                                    <div class="rgb-title">LED Streifen Farbe</div>
+                                    <div id="rgb-preview-wrap">
+                                        <div id="rgb-preview"></div>
+                                        <input type="color" id="rgb-picker" value="#00aaff">
+                                    </div>
+                                    <div class="rgb-sliders">
+                                        <div class="rgb-slider-row">
+                                            <label>R</label>
+                                            <input type="range" id="rgb-r" min="0" max="255" value="0" class="slider red-slider">
+                                            <span id="rgb-r-val">0</span>
+                                        </div>
+                                        <div class="rgb-slider-row">
+                                            <label>G</label>
+                                            <input type="range" id="rgb-g" min="0" max="255" value="170" class="slider green-slider">
+                                            <span id="rgb-g-val">170</span>
+                                        </div>
+                                        <div class="rgb-slider-row">
+                                            <label>B</label>
+                                            <input type="range" id="rgb-b" min="0" max="255" value="255" class="slider blue-slider">
+                                            <span id="rgb-b-val">255</span>
+                                        </div>
+                                    </div>
+                                    <button class="btn btn-primary" id="btn-send-rgb">RGB Senden</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="control-card">
+                            <div class="control-header">
+                                <div class="control-icon blinds-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="2" rx="1"/><rect x="3" y="7" width="18" height="2" rx="1"/><rect x="3" y="11" width="18" height="2" rx="1"/><rect x="3" y="15" width="18" height="2" rx="1"/><rect x="3" y="19" width="18" height="2" rx="1"/></svg>
+                                </div>
+                                <div>
+                                    <div class="control-title">Jalousien</div>
+                                    <div class="control-sub">Relay 2 · GPIO 17</div>
+                                </div>
+                                <div class="blind-status-badge" id="blinds-status-badge">IDLE</div>
+                            </div>
+                            <div class="control-body">
+                                <div class="blind-controls">
+                                    <button class="btn btn-ghost blind-btn" id="btn-blinds-up">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
+                                        Hoch
+                                    </button>
+                                    <button class="btn btn-ghost blind-btn" id="btn-blinds-stop">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
+                                        Stop
+                                    </button>
+                                    <button class="btn btn-ghost blind-btn" id="btn-blinds-down">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                                        Runter
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="control-card">
+                            <div class="control-header">
+                                <div class="control-icon hvac-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/><circle cx="12" cy="12" r="4"/></svg>
+                                </div>
+                                <div>
+                                    <div class="control-title">Klimaanlage</div>
+                                    <div class="control-sub">Relay 3 · GPIO 18</div>
+                                </div>
+                                <label class="toggle">
+                                    <input type="checkbox" id="toggle-hvac">
+                                    <span class="toggle-track"></span>
+                                </label>
+                            </div>
+                            <div class="control-body">
+                                <div class="hvac-info">
+                                    <div class="hvac-stat">
+                                        <div class="hvac-stat-label">Ist-Temp</div>
+                                        <div class="hvac-stat-value" id="hvac-current-temp">-- °C</div>
+                                    </div>
+                                    <div class="hvac-stat">
+                                        <div class="hvac-stat-label">Luftfeuchte</div>
+                                        <div class="hvac-stat-value" id="hvac-current-hum">-- %</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="control-card">
+                            <div class="control-header">
+                                <div class="control-icon socket-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M10 10v4M14 10v4"/></svg>
+                                </div>
+                                <div>
+                                    <div class="control-title">Steckdose</div>
+                                    <div class="control-sub">Relay 4 · GPIO 19</div>
+                                </div>
+                                <label class="toggle">
+                                    <input type="checkbox" id="toggle-socket">
+                                    <span class="toggle-track"></span>
+                                </label>
+                            </div>
+                            <div class="control-body">
+                                <p class="control-note">Schaltet die smarte Steckdose. Geeignet für Geräte, die keine Dauerverbindung benötigen.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="section-history" class="section">
+                    <div id="chart-controls">
+                        <div class="chart-range-btns">
+                            <button class="btn btn-ghost range-btn active" data-hours="1">1h</button>
+                            <button class="btn btn-ghost range-btn" data-hours="6">6h</button>
+                            <button class="btn btn-ghost range-btn" data-hours="24">24h</button>
+                        </div>
+                        <button class="btn btn-primary" id="btn-refresh-charts">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+                            Aktualisieren
+                        </button>
+                    </div>
+                    <div id="charts-grid">
+                        <div class="chart-card">
+                            <div class="chart-card-header">
+                                <div class="chart-title">Temperatur & Luftfeuchtigkeit</div>
+                                <div class="chart-legend">
+                                    <span class="legend-dot temp-dot"></span><span>Temp (°C)</span>
+                                    <span class="legend-dot hum-dot"></span><span>Feuchte (%)</span>
+                                </div>
+                            </div>
+                            <div class="chart-canvas-wrap"><canvas id="chart-temp-hum"></canvas></div>
+                        </div>
+                        <div class="chart-card">
+                            <div class="chart-card-header">
+                                <div class="chart-title">CO₂ & Licht</div>
+                                <div class="chart-legend">
+                                    <span class="legend-dot co2-dot"></span><span>CO₂ (ppm)</span>
+                                    <span class="legend-dot light-dot"></span><span>Licht (lux)</span>
+                                </div>
+                            </div>
+                            <div class="chart-canvas-wrap"><canvas id="chart-co2-light"></canvas></div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="section-automation" class="section">
+                    <div id="automation-header">
+                        <h2>Automatisierungsregeln</h2>
+                        <button class="btn btn-primary" id="btn-add-rule">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            Neue Regel
+                        </button>
+                    </div>
+
+                    <div id="rule-form-wrap" class="hidden">
+                        <div class="rule-form">
+                            <h3>Neue Automatisierungsregel</h3>
+                            <div class="form-grid">
+                                <div class="form-field">
+                                    <label for="rule-name">Regelname</label>
+                                    <input type="text" id="rule-name" placeholder="z.B. Automatik Klimaanlage">
+                                </div>
+                                <div class="form-field">
+                                    <label for="rule-sensor">Sensor</label>
+                                    <select id="rule-sensor">
+                                        <option value="temperature">Temperatur</option>
+                                        <option value="humidity">Luftfeuchtigkeit</option>
+                                        <option value="co2">CO₂</option>
+                                        <option value="light">Licht</option>
+                                        <option value="motion">Bewegung</option>
+                                    </select>
+                                </div>
+                                <div class="form-field">
+                                    <label for="rule-operator">Bedingung</label>
+                                    <select id="rule-operator">
+                                        <option value="gt">größer als (&gt;)</option>
+                                        <option value="lt">kleiner als (&lt;)</option>
+                                        <option value="gte">größer gleich (≥)</option>
+                                        <option value="lte">kleiner gleich (≤)</option>
+                                        <option value="eq">gleich (=)</option>
+                                    </select>
+                                </div>
+                                <div class="form-field">
+                                    <label for="rule-threshold">Schwellenwert</label>
+                                    <input type="number" id="rule-threshold" placeholder="z.B. 25">
+                                </div>
+                                <div class="form-field">
+                                    <label for="rule-actuator">Aktor</label>
+                                    <select id="rule-actuator">
+                                        <option value="light">Deckenlicht</option>
+                                        <option value="hvac">Klimaanlage</option>
+                                        <option value="socket">Steckdose</option>
+                                        <option value="blinds">Jalousien</option>
+                                    </select>
+                                </div>
+                                <div class="form-field">
+                                    <label for="rule-action">Aktion</label>
+                                    <select id="rule-action">
+                                        <option value="ON">Einschalten</option>
+                                        <option value="OFF">Ausschalten</option>
+                                        <option value="UP">Hoch (Jalousien)</option>
+                                        <option value="DOWN">Runter (Jalousien)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-actions">
+                                <button class="btn btn-ghost" id="btn-cancel-rule">Abbrechen</button>
+                                <button class="btn btn-primary" id="btn-save-rule">Regel speichern</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="rules-list"></div>
+                    <div id="rules-empty" class="hidden">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                        <p>Keine Regeln konfiguriert</p>
+                        <span>Erstelle deine erste Automatisierungsregel</span>
+                    </div>
+                </section>
+
+                <section id="section-system" class="section">
+                    <div id="system-grid">
+                        <div class="system-card">
+                            <div class="system-card-title">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18"/></svg>
+                                ESP32 Status
+                            </div>
+                            <div class="system-stats">
+                                <div class="sys-stat"><span class="sys-stat-label">IP-Adresse</span><span class="sys-stat-val" id="sys-ip">--</span></div>
+                                <div class="sys-stat"><span class="sys-stat-label">WiFi RSSI</span><span class="sys-stat-val" id="sys-rssi">-- dBm</span></div>
+                                <div class="sys-stat"><span class="sys-stat-label">Uptime (ESP32)</span><span class="sys-stat-val" id="sys-esp-uptime">--</span></div>
+                                <div class="sys-stat"><span class="sys-stat-label">Letzter Kontakt</span><span class="sys-stat-val" id="sys-last-seen">--</span></div>
+                            </div>
+                        </div>
+
+                        <div class="system-card">
+                            <div class="system-card-title">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+                                Server Status
+                            </div>
+                            <div class="system-stats">
+                                <div class="sys-stat"><span class="sys-stat-label">Server Uptime</span><span class="sys-stat-val" id="sys-server-uptime">--</span></div>
+                                <div class="sys-stat"><span class="sys-stat-label">Node.js Version</span><span class="sys-stat-val" id="sys-node">--</span></div>
+                                <div class="sys-stat"><span class="sys-stat-label">MQTT Broker</span><span class="sys-stat-val" id="sys-mqtt-status">--</span></div>
+                                <div class="sys-stat"><span class="sys-stat-label">WebSocket Clients</span><span class="sys-stat-val" id="sys-ws-clients">1</span></div>
+                            </div>
+                        </div>
+
+                        <div class="system-card">
+                            <div class="system-card-title">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.63a19.79 19.79 0 01-3.07-8.68A2 2 0 012 .73h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 8.53a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+                                MQTT Topicmonitor
+                            </div>
+                            <div id="mqtt-log">
+                                <div class="mqtt-log-empty">Warte auf Nachrichten…</div>
+                            </div>
+                        </div>
+
+                        <div class="system-card">
+                            <div class="system-card-title">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                OTA Update
+                            </div>
+                            <div class="ota-info">
+                                <p>Sende einen OTA-Trigger an den ESP32 über MQTT.</p>
+                                <input type="text" id="ota-url" placeholder="http://192.168.1.x/firmware.bin" class="ota-input">
+                                <button class="btn btn-warning" id="btn-ota-trigger">OTA Update starten</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script src="js/app.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/controls.js"></script>
+</body>
+</html>

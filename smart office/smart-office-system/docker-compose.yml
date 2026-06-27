@@ -1,0 +1,48 @@
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: smart-office-mqtt
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mqtt/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - mosquitto-data:/mosquitto/data
+      - mosquitto-log:/mosquitto/log
+    networks:
+      - office-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mosquitto_sub", "-h", "localhost", "-t", "$$SYS/#", "-C", "1", "-i", "health-check"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: smart-office-backend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - MQTT_BROKER=mqtt://mosquitto:1883
+      - PORT=3000
+    volumes:
+      - server-data:/app/data
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+    networks:
+      - office-net
+    restart: unless-stopped
+
+volumes:
+  mosquitto-data:
+  mosquitto-log:
+  server-data:
+
+networks:
+  office-net:
+    driver: bridge
